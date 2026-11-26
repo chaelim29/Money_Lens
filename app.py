@@ -1,4 +1,32 @@
+st.markdown("""
+    <style>
+    /* 전체 배경 */
+    .stApp {
+        background-color: #FFFFFF;
+        color: #222222;
+    }
 
+    /* 글자색 */
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    label {
+        color: #222222 !important;
+    }
+
+    /* 사이드바 */
+    [data-testid="stSidebar"] {
+        background-color: #F7F8FA;
+    }
+
+    /* 입력창 */
+    input, textarea {
+        background-color: #FFFFFF !important;
+        color: #222222 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 import streamlit as st
 import pandas as pd
 import requests
