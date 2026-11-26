@@ -1,3 +1,6 @@
+import streamlit as st
+import pandas as pd
+import requests
 st.markdown("""
     <style>
     /* 전체 배경 */
@@ -27,9 +30,7 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-import streamlit as st
-import pandas as pd
-import requests
+
 
 # ==================================================
 # 1. 페이지 설정
