@@ -1,36 +1,73 @@
+
 import streamlit as st
 import pandas as pd
 import requests
+
 st.markdown("""
     <style>
     /* 전체 배경 */
     .stApp {
-        background-color: #FFFFFF;
-        color: #222222;
+        background-color: #FFFFFF !important;
+        color: #222222 !important;
     }
 
-    /* 글자색 */
+    /* 기본 글자색 */
     [data-testid="stMarkdownContainer"] p,
     [data-testid="stMarkdownContainer"] h1,
     [data-testid="stMarkdownContainer"] h2,
     [data-testid="stMarkdownContainer"] h3,
-    label {
+    [data-testid="stMarkdownContainer"] li,
+    label,
+    .stCaption {
         color: #222222 !important;
     }
 
     /* 사이드바 */
     [data-testid="stSidebar"] {
-        background-color: #F7F8FA;
+        background-color: #F7F8FA !important;
     }
 
     /* 입력창 */
-    input, textarea {
+    input, textarea,
+    [data-baseweb="input"],
+    [data-baseweb="textarea"] {
         background-color: #FFFFFF !important;
         color: #222222 !important;
     }
+
+    /* 선택창 */
+    [data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #222222 !important;
+    }
+
+    /* 일반 버튼 */
+    .stButton > button {
+        background-color: #195B43 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+    }
+
+    /* 버튼 내부 글자 */
+    .stButton > button p,
+    .stButton > button span {
+        color: #FFFFFF !important;
+    }
+
+    /* 버튼 마우스 오버 */
+    .stButton > button:hover {
+        background-color: #124632 !important;
+        color: #FFFFFF !important;
+    }
+
+    /* 버튼 포커스 */
+    .stButton > button:focus {
+        color: #FFFFFF !important;
+        border-color: #195B43 !important;
+    }
+
     </style>
 """, unsafe_allow_html=True)
-
 
 # ==================================================
 # 1. 페이지 설정
