@@ -427,6 +427,7 @@ if menu == "HOME":
         else:
             st.warning("질문을 입력해 주세요.")
 
+
 # ==================================================
 # 7. 청년 정책 페이지
 # ==================================================
@@ -500,21 +501,6 @@ elif menu == "청년 정책":
                     key="youth_category"
                 )
 
-            # 지역 컬럼 확인
-            region_candidates = [
-                "zipCdNm",
-                "regionNm",
-                "sidoNm"
-            ]
-
-            region_col = next(
-                (
-                    col for col in region_candidates
-                    if col in df.columns
-                ),
-                None
-            )
-
             # 날짜 컬럼 확인
             date_candidates = [
                 "lastMdfcnDt",
@@ -533,28 +519,6 @@ elif menu == "청년 정책":
             col3, col4 = st.columns(2)
 
             with col3:
-
-                if region_col:
-
-                    regions = ["전체"] + sorted(
-                        df[region_col]
-                        .dropna()
-                        .astype(str)
-                        .unique()
-                        .tolist()
-                    )
-
-                else:
-
-                    regions = ["전체"]
-
-                selected_region = st.selectbox(
-                    "지역 선택",
-                    regions,
-                    key="youth_region"
-                )
-
-            with col4:
 
                 sort_option = st.selectbox(
                     "정렬 기준",
@@ -607,13 +571,6 @@ elif menu == "청년 정책":
                     filtered["lclsfNm"] == selected_category
                 ]
 
-            # 지역 필터
-            if selected_region != "전체" and region_col:
-
-                filtered = filtered[
-                    filtered[region_col].astype(str) == selected_region
-                ]
-
             # 날짜순 정렬
             if date_col:
 
@@ -635,12 +592,6 @@ elif menu == "청년 정책":
                     "날짜순 정렬을 적용할 수 없습니다."
                 )
 
-            if not region_col:
-
-                st.info(
-                    "API 응답에 지역명 정보가 없어 지역 필터를 적용할 수 없습니다."
-                )
-
             # ------------------------------------------
             # 더 보기 설정
             # ------------------------------------------
@@ -648,7 +599,6 @@ elif menu == "청년 정책":
             filter_signature = (
                 keyword,
                 selected_category,
-                selected_region,
                 sort_option
             )
 
@@ -726,13 +676,6 @@ elif menu == "청년 정책":
                         col2.write(
                             f"**주관기관:** {institution}"
                         )
-
-                        if region_col:
-
-                            st.write(
-                                "**지역:**",
-                                policy.get(region_col) or "지역 정보 없음"
-                            )
 
                         st.write(
                             "**정책 설명:**",
@@ -899,6 +842,7 @@ elif menu == "청년 정책":
         st.info(
             "청년 정책 불러오기를 눌러 최신 정책을 확인해 보세요."
         )
+
 
 # ==================================================
 # 9. 정기예금 페이지
