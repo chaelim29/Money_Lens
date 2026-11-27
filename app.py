@@ -258,80 +258,39 @@ def get_youth_policies(keyword="", category="전체"):
 
     url = "https://www.youthcenter.go.kr/go/ythip/getPlcy"
 
-    page_size = 100
-    all_policies = []
-    previous_page = None
+    params = {
+        "apiKeyNm": api_key,
+        "pageNum": 1,
+        "pageSize": 20,
+        "pageType": "1",
+        "rtnType": "json"
+    }
 
-    # 전체 페이지 자동 조회
-    for page_num in range(1, 101):
+    # 검색어가 있으면 API에서 정책명 기준으로 검색
+    if keyword:
+        params["plcyNm"] = keyword
 
-        params = {
-            "apiKeyNm": api_key,
-            "pageNum": page_num,
-            "pageSize": page_size,
-            "pageType": "1",
-            "rtnType": "json"
-        }
+    # 선택한 분야만 조회
+    if category != "전체":
+        params["lclsfNm"] = category
 
-        # 검색어가 있으면 정책명 기준 검색
-        if keyword:
-            params["plcyNm"] = keyword
+    response = requests.get(
+        url,
+        params=params,
+        timeout=20
+    )
 
-        # 선택한 분야만 조회
-        if category != "전체":
-            params["lclsfNm"] = category
+    response.raise_for_status()
 
-        response = requests.get(
-            url,
-            params=params,
-            timeout=20
-        )
+    data = response.json()
 
-        response.raise_for_status()
+    result = data.get("result", {})
+    policies = result.get("youthPolicyList", [])
 
-        data = response.json()
+    if isinstance(policies, dict):
+        policies = [policies]
 
-        result = data.get("result", {})
-        policies = result.get("youthPolicyList", [])
-
-        if isinstance(policies, dict):
-            policies = [policies]
-
-        # 더 이상 데이터가 없으면 종료
-        if not policies:
-            break
-
-        current_page = pd.DataFrame(policies)
-
-        # 페이지 번호가 적용되지 않아 같은 데이터가 반복되면 종료
-        if previous_page is not None and current_page.equals(previous_page):
-            break
-
-        all_policies.extend(policies)
-        previous_page = current_page
-
-        # 마지막 페이지 확인
-        if len(policies) < page_size:
-            break
-
-    # 데이터프레임 변환
-    df = pd.DataFrame(all_policies)
-
-    # 중복 정책 제거
-    if not df.empty:
-
-        if "plcyNo" in df.columns:
-            df = df.drop_duplicates(
-                subset=["plcyNo"]
-            )
-
-        else:
-            df = df.drop_duplicates()
-
-        df = df.reset_index(drop=True)
-
-    return df
-
+    return pd.DataFrame(policies)
 
 @st.cache_data(ttl=3600)
 def get_youth_policy_detail(policy_no):
