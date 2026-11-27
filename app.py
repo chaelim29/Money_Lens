@@ -1,17 +1,14 @@
-
 import streamlit as st
 import pandas as pd
 import requests
 
 st.markdown("""
     <style>
-    /* 전체 배경 */
     .stApp {
         background-color: #FFFFFF !important;
         color: #222222 !important;
     }
 
-    /* 기본 글자색 */
     [data-testid="stMarkdownContainer"] p,
     [data-testid="stMarkdownContainer"] h1,
     [data-testid="stMarkdownContainer"] h2,
@@ -22,12 +19,10 @@ st.markdown("""
         color: #222222 !important;
     }
 
-    /* 사이드바 */
     [data-testid="stSidebar"] {
         background-color: #F7F8FA !important;
     }
 
-    /* 입력창 */
     input, textarea,
     [data-baseweb="input"],
     [data-baseweb="textarea"] {
@@ -35,39 +30,34 @@ st.markdown("""
         color: #222222 !important;
     }
 
-    /* 선택창 */
     [data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         color: #222222 !important;
     }
 
-    /* 일반 버튼 */
     .stButton > button {
         background-color: #195B43 !important;
         color: #FFFFFF !important;
         border: none !important;
     }
 
-    /* 버튼 내부 글자 */
     .stButton > button p,
     .stButton > button span {
         color: #FFFFFF !important;
     }
 
-    /* 버튼 마우스 오버 */
     .stButton > button:hover {
         background-color: #124632 !important;
         color: #FFFFFF !important;
     }
 
-    /* 버튼 포커스 */
     .stButton > button:focus {
         color: #FFFFFF !important;
         border-color: #195B43 !important;
     }
-
     </style>
 """, unsafe_allow_html=True)
+
 
 # ==================================================
 # 1. 페이지 설정
@@ -159,7 +149,6 @@ def get_deposit_products():
 
     page = 1
 
-    # 페이지별 데이터 수집
     while True:
 
         params = {
@@ -183,12 +172,10 @@ def get_deposit_products():
                 result.get("err_msg", "API 조회 오류")
             )
 
-        # 상품 기본정보 수집
         base_list.extend(
             result.get("baseList", [])
         )
 
-        # 상품 금리정보 수집
         option_list.extend(
             result.get("optionList", [])
         )
@@ -202,14 +189,12 @@ def get_deposit_products():
 
         page += 1
 
-    # 데이터프레임 변환
     base_df = pd.DataFrame(base_list)
     option_df = pd.DataFrame(option_list)
 
     if base_df.empty or option_df.empty:
         return pd.DataFrame()
 
-    # 상품코드와 금융회사 코드를 기준으로 결합
     df = pd.merge(
         base_df,
         option_df,
@@ -217,7 +202,6 @@ def get_deposit_products():
         how="inner"
     )
 
-    # 필요한 컬럼 선택
     columns = [
         "kor_co_nm",
         "fin_prdt_nm",
@@ -236,7 +220,6 @@ def get_deposit_products():
         [col for col in columns if col in df.columns]
     ].copy()
 
-    # 숫자형 데이터 변환
     df["save_trm"] = pd.to_numeric(
         df["save_trm"], errors="coerce"
     )
@@ -251,8 +234,9 @@ def get_deposit_products():
 
     return df
 
+
 # ==================================================
-# 청년 정책 OPEN API
+# 5. 온통청년 청년 정책 API
 # ==================================================
 
 @st.cache_data(ttl=3600)
@@ -287,8 +271,12 @@ def get_youth_policies():
 
         if "result" not in data:
             raise Exception(
-                data.get("resultMessage", "청년 정책 API 조회 오류")
+                data.get(
+                    "resultMessage",
+                    "청년 정책 API 조회 오류"
+                )
             )
+
         result = data.get("result", {})
 
         policies = result.get("youthPolicyList", [])
@@ -346,7 +334,7 @@ def get_youth_policy_detail(policy_no):
 
 
 # ==================================================
-# 5. 상단 메뉴
+# 6. 상단 메뉴
 # ==================================================
 
 menu_list = [
@@ -377,7 +365,7 @@ st.divider()
 
 
 # ==================================================
-# 6. HOME
+# 7. HOME
 # ==================================================
 
 if menu == "HOME":
@@ -446,11 +434,8 @@ if menu == "HOME":
 
         else:
             st.warning("질문을 입력해 주세요.")
-
-
-
 # ==================================================
-# 7. 청년 정책 페이지
+# 8. 청년 정책 페이지
 # ==================================================
 
 elif menu == "청년 정책":
@@ -666,19 +651,26 @@ elif menu == "청년 정책":
                                         detail.get("srngMthdCn") or "정보 없음"
                                     )
 
-                                    apply_url = detail.get("aplyUrlAddr")
+                                    # 신청 URL이 없으면 공식 참고 URL을 대체 링크로 사용
+                                    apply_url = (
+                                        detail.get("aplyUrlAddr")
+                                        or detail.get("refUrlAddr1")
+                                        or detail.get("refUrlAddr2")
+                                    )
 
-                                    if (
-                                        apply_url
-                                        and str(apply_url).startswith(
+                                    if apply_url:
+                                        apply_url = str(apply_url).strip()
+
+                                        if apply_url and not apply_url.startswith(
                                             ("https://", "http://")
-                                        )
-                                    ):
+                                        ):
+                                            apply_url = "https://" + apply_url
 
-                                        st.link_button(
-                                            "정책 신청 페이지 이동 ↗",
-                                            apply_url
-                                        )
+                                        if apply_url:
+                                            st.link_button(
+                                                "정책 신청·공고 페이지 이동 ↗",
+                                                apply_url
+                                            )
 
                             except Exception as e:
 
@@ -699,8 +691,9 @@ elif menu == "청년 정책":
             "청년 정책 불러오기를 눌러 최신 정책을 확인해 보세요."
         )
 
+
 # ==================================================
-# 8. 정기예금 페이지
+# 9. 정기예금 페이지
 # ==================================================
 
 elif menu == "예·적금":
@@ -783,10 +776,8 @@ elif menu == "예·적금":
             if not filtered.empty:
 
                 # ==========================================
-                # 8-1. 은행별 검색 및 상품명 검색
+                # 9-1. 은행별 검색 및 상품명 검색
                 # ==========================================
-
-        
 
                 col1, col2 = st.columns(2)
 
@@ -841,7 +832,7 @@ elif menu == "예·적금":
                 )
 
                 # ==========================================
-                # 8-2. 검색 결과 상품 비교
+                # 9-2. 검색 결과 상품 비교
                 # ==========================================
 
                 if not search_df.empty:
@@ -871,7 +862,7 @@ elif menu == "예·적금":
                     )
 
                     # ==========================================
-                    # 8-3. 상품 상세정보
+                    # 9-3. 상품 상세정보
                     # ==========================================
 
                     st.divider()
@@ -963,10 +954,8 @@ elif menu == "예·적금":
                 "금리 및 상품 조건은 금융회사 공시 기준이며 "
                 "실제 가입 전 해당 금융회사에서 확인해야 합니다."
             )
-
-
 # ==================================================
-# 9. 대출·금리 페이지
+# 10. 대출·금리 페이지
 # ==================================================
 
 elif menu == "대출·금리":
@@ -996,7 +985,7 @@ elif menu == "대출·금리":
 
 
 # ==================================================
-# 10. 경제 뉴스 페이지
+# 11. 경제 뉴스 페이지
 # ==================================================
 
 elif menu == "경제 뉴스":
@@ -1026,7 +1015,7 @@ elif menu == "경제 뉴스":
 
 
 # ==================================================
-# 11. 하단
+# 12. 하단
 # ==================================================
 
 st.divider()
