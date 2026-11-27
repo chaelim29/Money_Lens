@@ -56,13 +56,13 @@ st.markdown("""
         border-color: #195B43 !important;
     }
     .stFormSubmitButton > button {
-    background-color: #195B43 !important;
+    background-color: #16865B !important;
     color: #FFFFFF !important;
     border: none !important;
     border-radius: 10px !important;
     }
     .stFormSubmitButton > button:hover {
-    background-color: #124632 !important;
+    background-color: #10734D !important;
     color: #FFFFFF !important;
     }
     
