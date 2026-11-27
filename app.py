@@ -428,6 +428,7 @@ if menu == "HOME":
             st.warning("질문을 입력해 주세요.")
 
 
+
 # ==================================================
 # 7. 청년 정책 페이지
 # ==================================================
@@ -442,8 +443,11 @@ elif menu == "청년 정책":
 
     st.divider()
 
-    # 정책 데이터 불러오기
-    if st.button("청년 정책 불러오기", type="primary"):
+    # ------------------------------------------
+    # 정책 데이터 자동 불러오기
+    # ------------------------------------------
+
+    if "youth_policy_data" not in st.session_state:
 
         try:
             with st.spinner("최신 청년 정책을 불러오고 있습니다..."):
@@ -454,395 +458,393 @@ elif menu == "청년 정책":
                 st.session_state.youth_show_count = 20
 
         except Exception as e:
+
             st.error(f"정책 조회에 실패했습니다: {e}")
+            st.stop()
 
-    # 정책 데이터가 있는 경우
-    if "youth_policy_data" in st.session_state:
+    # ------------------------------------------
+    # 정책 데이터 확인
+    # ------------------------------------------
 
-        df = st.session_state.youth_policy_data.copy()
+    df = st.session_state.youth_policy_data.copy()
 
-        if df.empty:
+    if df.empty:
 
-            st.warning("조회된 청년 정책이 없습니다.")
-
-        else:
-
-            st.success(
-                f"총 {len(df):,}개의 청년 정책을 불러왔습니다."
-            )
-
-            st.divider()
-
-            # ------------------------------------------
-            # 검색 및 필터
-            # ------------------------------------------
-
-            st.subheader("🔎 나에게 맞는 정책 찾기")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-
-                keyword = st.text_input(
-                    "정책 검색",
-                    placeholder="예: 취업, 월세, 창업, 금융지원",
-                    key="youth_keyword"
-                )
-
-            with col2:
-
-                categories = ["전체"] + sorted(
-                    df["lclsfNm"].dropna().unique().tolist()
-                ) if "lclsfNm" in df.columns else ["전체"]
-
-                selected_category = st.selectbox(
-                    "정책 분야",
-                    categories,
-                    key="youth_category"
-                )
-
-            # 날짜 컬럼 확인
-            date_candidates = [
-                "lastMdfcnDt",
-                "frstRegDt",
-                "plcyRegDt"
-            ]
-
-            date_col = next(
-                (
-                    col for col in date_candidates
-                    if col in df.columns
-                ),
-                None
-            )
-
-            col3, col4 = st.columns(2)
-
-            with col3:
-
-                sort_option = st.selectbox(
-                    "정렬 기준",
-                    ["최신순", "오래된순"],
-                    key="youth_sort"
-                )
-
-            # ------------------------------------------
-            # 검색 조건 적용
-            # ------------------------------------------
-
-            filtered = df.copy()
-
-            # 키워드 검색
-            if keyword.strip():
-
-                search_columns = [
-                    "plcyNm",
-                    "plcyExplnCn",
-                    "plcyKywdNm",
-                    "plcySprtCn"
-                ]
-
-                search_columns = [
-                    col for col in search_columns
-                    if col in filtered.columns
-                ]
-
-                if search_columns:
-
-                    search_text = filtered[
-                        search_columns
-                    ].fillna("").astype(str)
-
-                    mask = search_text.apply(
-                        lambda row: row.str.contains(
-                            keyword.strip(),
-                            case=False,
-                            regex=False
-                        ).any(),
-                        axis=1
-                    )
-
-                    filtered = filtered[mask]
-
-            # 정책 분야 필터
-            if selected_category != "전체" and "lclsfNm" in filtered.columns:
-
-                filtered = filtered[
-                    filtered["lclsfNm"] == selected_category
-                ]
-
-            # 날짜순 정렬
-            if date_col:
-
-                filtered["_sort_date"] = pd.to_datetime(
-                    filtered[date_col],
-                    errors="coerce"
-                )
-
-                filtered = filtered.sort_values(
-                    by="_sort_date",
-                    ascending=(sort_option == "오래된순"),
-                    na_position="last"
-                ).drop(columns=["_sort_date"])
-
-            else:
-
-                st.info(
-                    "API에서 등록일 또는 수정일 정보를 제공하지 않아 "
-                    "날짜순 정렬을 적용할 수 없습니다."
-                )
-
-            # ------------------------------------------
-            # 더 보기 설정
-            # ------------------------------------------
-
-            filter_signature = (
-                keyword,
-                selected_category,
-                sort_option
-            )
-
-            if (
-                st.session_state.get("youth_filter_signature")
-                != filter_signature
-            ):
-
-                st.session_state.youth_filter_signature = filter_signature
-                st.session_state.youth_show_count = 20
-
-            if "youth_show_count" not in st.session_state:
-
-                st.session_state.youth_show_count = 20
-
-            st.caption(
-                f"검색 결과: {len(filtered):,}개 정책"
-            )
-
-            st.divider()
-
-            # ------------------------------------------
-            # 정책 목록 출력
-            # ------------------------------------------
-
-            if filtered.empty:
-
-                st.warning(
-                    "검색 조건에 맞는 정책이 없습니다."
-                )
-
-            else:
-
-                display_filtered = filtered.head(
-                    st.session_state.youth_show_count
-                )
-
-                for _, policy in display_filtered.iterrows():
-
-                    policy_name = policy.get(
-                        "plcyNm",
-                        "정책명 없음"
-                    )
-
-                    policy_no = policy.get(
-                        "plcyNo",
-                        ""
-                    )
-
-                    institution = policy.get(
-                        "sprvsnInstCdNm",
-                        "기관 정보 없음"
-                    )
-
-                    category = policy.get(
-                        "lclsfNm",
-                        "분류 없음"
-                    )
-
-                    period = policy.get(
-                        "aplyYmd",
-                        "신청기간 확인 필요"
-                    )
-
-                    with st.expander(
-                        f"📌 {policy_name}"
-                    ):
-
-                        col1, col2 = st.columns(2)
-
-                        col1.write(
-                            f"**분야:** {category}"
-                        )
-
-                        col2.write(
-                            f"**주관기관:** {institution}"
-                        )
-
-                        st.write(
-                            "**정책 설명:**",
-                            policy.get("plcyExplnCn") or "정보 없음"
-                        )
-
-                        st.write(
-                            "**지원 내용:**",
-                            policy.get("plcySprtCn") or "정보 없음"
-                        )
-
-                        st.write(
-                            "**신청 기간:**",
-                            period
-                        )
-
-                        st.divider()
-
-                        # 상세정보 조회
-                        if st.button(
-                            "상세 자격 및 신청방법 확인",
-                            key=f"youth_detail_{policy_no}"
-                        ):
-
-                            try:
-
-                                with st.spinner(
-                                    "상세정보를 불러오는 중입니다..."
-                                ):
-
-                                    detail = get_youth_policy_detail(
-                                        str(policy_no)
-                                    )
-
-                                if not detail:
-
-                                    st.warning(
-                                        "상세정보가 없습니다."
-                                    )
-
-                                else:
-
-                                    st.markdown("#### 👤 지원 자격")
-
-                                    st.write(
-                                        "**연령:**",
-                                        f"{detail.get('sprtTrgtMinAge', '-')}"
-                                        f" ~ {detail.get('sprtTrgtMaxAge', '-')}세"
-                                    )
-
-                                    st.write(
-                                        "**소득 조건:**",
-                                        detail.get("earnEtcCn")
-                                        or "별도 내용 확인 필요"
-                                    )
-
-                                    st.write(
-                                        "**추가 자격 조건:**",
-                                        detail.get("addAplyQlfcCndCn")
-                                        or "정보 없음"
-                                    )
-
-                                    st.write(
-                                        "**참여 제한 대상:**",
-                                        detail.get("ptcpPrpTrgtCn")
-                                        or "정보 없음"
-                                    )
-
-                                    st.markdown("#### 📝 신청 안내")
-
-                                    st.write(
-                                        "**신청 방법:**",
-                                        detail.get("plcyAplyMthdCn")
-                                        or "정보 없음"
-                                    )
-
-                                    st.write(
-                                        "**제출 서류:**",
-                                        detail.get("sbmsnDcmntCn")
-                                        or "정보 없음"
-                                    )
-
-                                    st.write(
-                                        "**심사 방법:**",
-                                        detail.get("srngMthdCn")
-                                        or "정보 없음"
-                                    )
-
-                                    # 신청 URL 또는 참고 URL
-                                    apply_url = (
-                                        detail.get("aplyUrlAddr")
-                                        or detail.get("refUrlAddr1")
-                                        or detail.get("refUrlAddr2")
-                                    )
-
-                                    if apply_url:
-
-                                        apply_url = str(
-                                            apply_url
-                                        ).strip()
-
-                                        if apply_url and not apply_url.startswith(
-                                            ("https://", "http://")
-                                        ):
-
-                                            apply_url = (
-                                                "https://" + apply_url
-                                            )
-
-                                        if apply_url:
-
-                                            st.link_button(
-                                                "정책 신청·공고 페이지 이동 ↗",
-                                                apply_url
-                                            )
-
-                            except Exception as e:
-
-                                st.error(
-                                    f"상세정보 조회 실패: {e}"
-                                )
-
-                # --------------------------------------
-                # 더 보기 버튼
-                # --------------------------------------
-
-                st.divider()
-
-                current_count = min(
-                    st.session_state.youth_show_count,
-                    len(filtered)
-                )
-
-                st.caption(
-                    f"{current_count:,}개 / {len(filtered):,}개 표시 중"
-                )
-
-                if current_count < len(filtered):
-
-                    if st.button(
-                        "더 보기 ↓",
-                        use_container_width=True,
-                        key="youth_load_more"
-                    ):
-
-                        st.session_state.youth_show_count += 20
-                        st.rerun()
-
-                else:
-
-                    st.caption(
-                        "모든 정책을 확인했습니다."
-                    )
-
-            st.divider()
-
-            st.caption(
-                "정책 정보 출처: 온통청년 OPEN API | "
-                "실제 신청 전 공식 공고에서 자격 및 기간을 확인하세요."
-            )
+        st.warning("조회된 청년 정책이 없습니다.")
 
     else:
 
-        st.info(
-            "청년 정책 불러오기를 눌러 최신 정책을 확인해 보세요."
+        st.success(
+            f"총 {len(df):,}개의 청년 정책을 확인할 수 있습니다."
         )
 
+        st.divider()
+
+        # ------------------------------------------
+        # 검색 및 필터
+        # ------------------------------------------
+
+        st.subheader("🔎 나에게 맞는 정책 찾기")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            keyword = st.text_input(
+                "정책 검색",
+                placeholder="예: 취업, 월세, 창업, 금융지원",
+                key="youth_keyword"
+            )
+
+        with col2:
+
+            categories = ["전체"] + sorted(
+                df["lclsfNm"].dropna().unique().tolist()
+            ) if "lclsfNm" in df.columns else ["전체"]
+
+            selected_category = st.selectbox(
+                "정책 분야",
+                categories,
+                key="youth_category"
+            )
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+
+            sort_option = st.selectbox(
+                "정렬 기준",
+                ["최신순", "오래된순"],
+                key="youth_sort"
+            )
+
+        # ------------------------------------------
+        # 검색 조건 적용
+        # ------------------------------------------
+
+        filtered = df.copy()
+
+        # 키워드 검색
+        if keyword.strip():
+
+            search_columns = [
+                "plcyNm",
+                "plcyExplnCn",
+                "plcyKywdNm",
+                "plcySprtCn"
+            ]
+
+            search_columns = [
+                col for col in search_columns
+                if col in filtered.columns
+            ]
+
+            if search_columns:
+
+                search_text = filtered[
+                    search_columns
+                ].fillna("").astype(str)
+
+                mask = search_text.apply(
+                    lambda row: row.str.contains(
+                        keyword.strip(),
+                        case=False,
+                        regex=False
+                    ).any(),
+                    axis=1
+                )
+
+                filtered = filtered[mask]
+
+        # 정책 분야 필터
+        if selected_category != "전체" and "lclsfNm" in filtered.columns:
+
+            filtered = filtered[
+                filtered["lclsfNm"] == selected_category
+            ]
+
+        # ------------------------------------------
+        # 날짜순 정렬
+        # ------------------------------------------
+
+        date_candidates = [
+            "lastMdfcnDt",
+            "frstRegDt",
+            "plcyRegDt"
+        ]
+
+        date_col = next(
+            (
+                col for col in date_candidates
+                if col in filtered.columns
+            ),
+            None
+        )
+
+        if date_col:
+
+            filtered["_sort_date"] = pd.to_datetime(
+                filtered[date_col],
+                errors="coerce"
+            )
+
+            filtered = filtered.sort_values(
+                by="_sort_date",
+                ascending=(sort_option == "오래된순"),
+                na_position="last"
+            ).drop(columns=["_sort_date"])
+
+        else:
+
+            st.info(
+                "API에서 등록일 또는 수정일 정보를 제공하지 않아 "
+                "날짜순 정렬을 적용할 수 없습니다."
+            )
+
+        # ------------------------------------------
+        # 더 보기 설정
+        # ------------------------------------------
+
+        filter_signature = (
+            keyword,
+            selected_category,
+            sort_option
+        )
+
+        if (
+            st.session_state.get("youth_filter_signature")
+            != filter_signature
+        ):
+
+            st.session_state.youth_filter_signature = filter_signature
+            st.session_state.youth_show_count = 20
+
+        if "youth_show_count" not in st.session_state:
+
+            st.session_state.youth_show_count = 20
+
+        st.caption(
+            f"검색 결과: {len(filtered):,}개 정책"
+        )
+
+        st.divider()
+
+        # ------------------------------------------
+        # 정책 목록 출력
+        # ------------------------------------------
+
+        if filtered.empty:
+
+            st.warning(
+                "검색 조건에 맞는 정책이 없습니다."
+            )
+
+        else:
+
+            display_filtered = filtered.head(
+                st.session_state.youth_show_count
+            )
+
+            for _, policy in display_filtered.iterrows():
+
+                policy_name = policy.get(
+                    "plcyNm",
+                    "정책명 없음"
+                )
+
+                policy_no = policy.get(
+                    "plcyNo",
+                    ""
+                )
+
+                institution = policy.get(
+                    "sprvsnInstCdNm",
+                    "기관 정보 없음"
+                )
+
+                category = policy.get(
+                    "lclsfNm",
+                    "분류 없음"
+                )
+
+                period = policy.get(
+                    "aplyYmd",
+                    "신청기간 확인 필요"
+                )
+
+                with st.expander(
+                    f"📌 {policy_name}"
+                ):
+
+                    col1, col2 = st.columns(2)
+
+                    col1.write(
+                        f"**분야:** {category}"
+                    )
+
+                    col2.write(
+                        f"**주관기관:** {institution}"
+                    )
+
+                    st.write(
+                        "**정책 설명:**",
+                        policy.get("plcyExplnCn") or "정보 없음"
+                    )
+
+                    st.write(
+                        "**지원 내용:**",
+                        policy.get("plcySprtCn") or "정보 없음"
+                    )
+
+                    st.write(
+                        "**신청 기간:**",
+                        period
+                    )
+
+                    st.divider()
+
+                    # 상세정보 조회
+                    if st.button(
+                        "상세 자격 및 신청방법 확인",
+                        key=f"youth_detail_{policy_no}"
+                    ):
+
+                        try:
+
+                            with st.spinner(
+                                "상세정보를 불러오는 중입니다..."
+                            ):
+
+                                detail = get_youth_policy_detail(
+                                    str(policy_no)
+                                )
+
+                            if not detail:
+
+                                st.warning(
+                                    "상세정보가 없습니다."
+                                )
+
+                            else:
+
+                                st.markdown("#### 👤 지원 자격")
+
+                                st.write(
+                                    "**연령:**",
+                                    f"{detail.get('sprtTrgtMinAge', '-')}"
+                                    f" ~ {detail.get('sprtTrgtMaxAge', '-')}세"
+                                )
+
+                                st.write(
+                                    "**소득 조건:**",
+                                    detail.get("earnEtcCn")
+                                    or "별도 내용 확인 필요"
+                                )
+
+                                st.write(
+                                    "**추가 자격 조건:**",
+                                    detail.get("addAplyQlfcCndCn")
+                                    or "정보 없음"
+                                )
+
+                                st.write(
+                                    "**참여 제한 대상:**",
+                                    detail.get("ptcpPrpTrgtCn")
+                                    or "정보 없음"
+                                )
+
+                                st.markdown("#### 📝 신청 안내")
+
+                                st.write(
+                                    "**신청 방법:**",
+                                    detail.get("plcyAplyMthdCn")
+                                    or "정보 없음"
+                                )
+
+                                st.write(
+                                    "**제출 서류:**",
+                                    detail.get("sbmsnDcmntCn")
+                                    or "정보 없음"
+                                )
+
+                                st.write(
+                                    "**심사 방법:**",
+                                    detail.get("srngMthdCn")
+                                    or "정보 없음"
+                                )
+
+                                # 신청 URL 또는 참고 URL
+                                apply_url = (
+                                    detail.get("aplyUrlAddr")
+                                    or detail.get("refUrlAddr1")
+                                    or detail.get("refUrlAddr2")
+                                )
+
+                                if apply_url:
+
+                                    apply_url = str(
+                                        apply_url
+                                    ).strip()
+
+                                    if apply_url and not apply_url.startswith(
+                                        ("https://", "http://")
+                                    ):
+
+                                        apply_url = (
+                                            "https://" + apply_url
+                                        )
+
+                                    if apply_url:
+
+                                        st.link_button(
+                                            "정책 신청·공고 페이지 이동 ↗",
+                                            apply_url
+                                        )
+
+                        except Exception as e:
+
+                            st.error(
+                                f"상세정보 조회 실패: {e}"
+                            )
+
+            # --------------------------------------
+            # 더 보기 버튼
+            # --------------------------------------
+
+            st.divider()
+
+            current_count = min(
+                st.session_state.youth_show_count,
+                len(filtered)
+            )
+
+            st.caption(
+                f"{current_count:,}개 / {len(filtered):,}개 표시 중"
+            )
+
+            if current_count < len(filtered):
+
+                if st.button(
+                    "더 보기 ↓",
+                    use_container_width=True,
+                    key="youth_load_more"
+                ):
+
+                    st.session_state.youth_show_count += 20
+                    st.rerun()
+
+            else:
+
+                st.caption(
+                    "모든 정책을 확인했습니다."
+                )
+
+        st.divider()
+
+        st.caption(
+            "정책 정보 출처: 온통청년 OPEN API | "
+            "실제 신청 전 공식 공고에서 자격 및 기간을 확인하세요."
+        )
 
 # ==================================================
 # 9. 정기예금 페이지
